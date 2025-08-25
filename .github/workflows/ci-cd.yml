@@ -22,11 +22,6 @@ jobs:
         image: redis:7-alpine
         ports:
           - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     
     steps:
     - name: 📥 Checkout code
@@ -43,6 +38,10 @@ jobs:
       
     - name: 🔗 Test Redis connection
       run: |
+        # Wait for Redis to be ready
+        echo "⏳ Waiting for Redis to start..."
+        sleep 10
+        
         # Test Redis connection using Node.js
         node -e "
         const redis = require('redis');
