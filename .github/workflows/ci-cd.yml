@@ -48,11 +48,7 @@ jobs:
         echo "⏳ Waiting for Redis to start..."
         sleep 10
         
-        # Test Redis connection using CLI (simple)
-        redis-cli -h localhost -p 6379 ping
-        echo "✅ Redis CLI ping successful"
-        
-        # Test Redis connection using Node.js (comprehensive)
+        # Test Redis connection using Node.js (reliable method)
         node -e "
         const redis = require('redis');
         const client = redis.createClient({ url: 'redis://localhost:6379' });
