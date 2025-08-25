@@ -43,8 +43,22 @@ jobs:
       
     - name: 🔗 Test Redis connection
       run: |
-        redis-cli ping
-        echo "Redis is running and accessible"
+        # Test Redis connection using Node.js
+        node -e "
+        const redis = require('redis');
+        const client = redis.createClient({ url: 'redis://localhost:6379' });
+        client.connect().then(() => {
+          console.log('✅ Redis connection successful');
+          return client.ping();
+        }).then((response) => {
+          console.log('✅ Redis ping response:', response);
+          client.disconnect();
+          process.exit(0);
+        }).catch((err) => {
+          console.error('❌ Redis connection failed:', err);
+          process.exit(1);
+        });
+        "
       
     - name: 🔍 Run linting (if configured)
       run: |
