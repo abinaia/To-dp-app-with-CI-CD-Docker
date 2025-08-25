@@ -36,13 +36,23 @@ jobs:
     - name: 📋 Install dependencies
       run: npm ci
       
-    - name: 🔗 Test Redis connection
+    - name: � Install Redis CLI tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y redis-tools
+        echo "✅ Redis CLI tools installed"
+      
+    - name: �🔗 Test Redis connection
       run: |
         # Wait for Redis to be ready
         echo "⏳ Waiting for Redis to start..."
         sleep 10
         
-        # Test Redis connection using Node.js
+        # Test Redis connection using CLI (simple)
+        redis-cli -h localhost -p 6379 ping
+        echo "✅ Redis CLI ping successful"
+        
+        # Test Redis connection using Node.js (comprehensive)
         node -e "
         const redis = require('redis');
         const client = redis.createClient({ url: 'redis://localhost:6379' });
