@@ -1,0 +1,57 @@
+/* Font Awesome Fallback Icons */
+/* This file provides basic fallback styles when Font Awesome can't load */
+
+.fas, .fa {
+  font-family: Arial, sans-serif;
+  font-style: normal;
+  font-weight: bold;
+  text-rendering: auto;
+  display: inline-block;
+}
+
+/* Basic icon replacements using Unicode characters */
+.fa-tasks::before, .fas.fa-tasks::before {
+  content: "📋";
+}
+
+.fa-plus::before, .fas.fa-plus::before {
+  content: "+";
+}
+
+.fa-edit::before, .fas.fa-edit::before {
+  content: "✏️";
+}
+
+.fa-trash::before, .fas.fa-trash::before {
+  content: "🗑️";
+}
+
+.fa-check::before, .fas.fa-check::before {
+  content: "✓";
+}
+
+.fa-spinner::before, .fas.fa-spinner::before {
+  content: "⟳";
+}
+
+.fa-github::before, .fab.fa-github::before {
+  content: "⚡";
+}
+
+.fa-docker::before, .fab.fa-docker::before {
+  content: "🐳";
+}
+
+.fa-clipboard-list::before, .fas.fa-clipboard-list::before {
+  content: "📄";
+}
+
+/* Spinner animation */
+.fa-spin {
+  animation: fa-spin 2s infinite linear;
+}
+
+@keyframes fa-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

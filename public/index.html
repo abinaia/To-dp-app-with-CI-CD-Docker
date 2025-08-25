@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DevOps To-Do App</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="fallback-icons.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1><i class="fas fa-tasks"></i> DevOps To-Do App</h1>
+            <p class="subtitle">Built with CI/CD Pipeline • Docker • GitHub Actions</p>
+            <div class="health-status">
+                <span id="health-indicator" class="health-dot"></span>
+                <span id="health-text">Checking...</span>
+            </div>
+        </header>
+
+        <main class="main">
+            <div class="todo-input-section">
+                <div class="input-container">
+                    <input 
+                        type="text" 
+                        id="todoInput" 
+                        placeholder="Add a new todo item..." 
+                        maxlength="200"
+                    >
+                    <button id="addBtn" class="add-btn">
+                        <i class="fas fa-plus"></i>
+                        Add
+                    </button>
+                </div>
+            </div>
+
+            <div class="stats-section">
+                <div class="stat-card">
+                    <span class="stat-number" id="totalCount">0</span>
+                    <span class="stat-label">Total</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number" id="completedCount">0</span>
+                    <span class="stat-label">Completed</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number" id="pendingCount">0</span>
+                    <span class="stat-label">Pending</span>
+                </div>
+            </div>
+
+            <div class="todos-section">
+                <div class="section-header">
+                    <h2>Your Tasks</h2>
+                    <button id="clearCompleted" class="clear-btn">
+                        <i class="fas fa-trash"></i>
+                        Clear Completed
+                    </button>
+                </div>
+                <div id="todosList" class="todos-list">
+                    <div class="loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        Loading todos...
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <div class="footer-content">
+                <p>
+                    <i class="fab fa-github"></i>
+                    Deployed via GitHub Actions CI/CD Pipeline
+                </p>
+                <p>
+                    <i class="fab fa-docker"></i>
+                    Containerized with Docker
+                </p>
+                <div class="deployment-info">
+                    <span id="deploymentTime"></span>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Toast notifications -->
+    <div id="toast" class="toast"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>

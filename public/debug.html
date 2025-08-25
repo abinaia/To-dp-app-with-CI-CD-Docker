@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Todo Loading</title>
+</head>
+<body>
+    <h1>Debug Todo Loading</h1>
+    <button onclick="testLoadTodos()">Test Load Todos</button>
+    <button onclick="testAPICall()">Test Direct API Call</button>
+    <div id="result"></div>
+
+    <script>
+        async function testAPICall() {
+            try {
+                console.log('🧪 Testing direct API call...');
+                const response = await fetch('/api/todos');
+                const data = await response.json();
+                console.log('📨 API Response:', data);
+                document.getElementById('result').innerHTML = `
+                    <h3>API Response:</h3>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                console.error('❌ API Error:', error);
+                document.getElementById('result').innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+
+        async function testLoadTodos() {
+            try {
+                console.log('🧪 Testing loadTodos function...');
+                // Copy the exact loadTodos function from main script
+                const API_BASE = '/api';
+                
+                console.log('🔄 Loading todos from API...');
+                const response = await fetch(`${API_BASE}/todos`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('📨 API Response:', data);
+                
+                if (data.success) {
+                    const todos = data.data;
+                    console.log('✅ Todos loaded:', todos.length, 'items');
+                    console.log('📋 Todos data:', todos);
+                    
+                    document.getElementById('result').innerHTML = `
+                        <h3>Todos loaded successfully!</h3>
+                        <p>Found ${todos.length} todos:</p>
+                        <ul>
+                            ${todos.map(todo => `<li>${todo.text} (${todo.completed ? 'completed' : 'pending'})</li>`).join('')}
+                        </ul>
+                    `;
+                } else {
+                    throw new Error(data.error || 'Failed to load todos');
+                }
+            } catch (error) {
+                console.error('❌ Failed to load todos:', error);
+                document.getElementById('result').innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+
+        // Auto-test on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 Debug page loaded');
+            testAPICall();
+        });
+    </script>
+</body>
+</html>

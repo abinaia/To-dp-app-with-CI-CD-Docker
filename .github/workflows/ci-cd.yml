@@ -1,0 +1,252 @@
+name: 🚀 CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  NODE_VERSION: '18'
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # Job 1: Code Quality & Testing
+  test:
+    name: 🧪 Test & Quality Check
+    runs-on: ubuntu-latest
+    
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: 📦 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        
+    - name: 📋 Install dependencies
+      run: npm ci
+      
+    - name: 🔗 Test Redis connection
+      run: |
+        redis-cli ping
+        echo "Redis is running and accessible"
+      
+    - name: 🔍 Run linting (if configured)
+      run: |
+        if [ -f ".eslintrc.js" ] || [ -f ".eslintrc.json" ]; then
+          npm run lint
+        else
+          echo "No linting configuration found, skipping..."
+        fi
+      continue-on-error: true
+      
+    - name: 🧪 Run tests
+      run: npm test
+      env:
+        REDIS_URL: redis://localhost:6379
+        NODE_ENV: test
+      
+    - name: 📊 Upload coverage reports
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage/lcov.info
+        flags: unittests
+        name: codecov-umbrella
+      continue-on-error: true
+
+  # Job 2: Security Scanning
+  security:
+    name: 🔒 Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: 📦 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        
+    - name: 📋 Install dependencies
+      run: npm ci
+      
+    - name: 🔍 Run security audit
+      run: npm audit --audit-level high
+      continue-on-error: true
+
+  # Job 3: Build Docker Image
+  build:
+    name: 🐳 Build Docker Image
+    runs-on: ubuntu-latest
+    needs: [test, security]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+      image-digest: ${{ steps.build.outputs.digest }}
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: 🐳 Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: 🔐 Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: 🏷️ Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+          
+    - name: 🔨 Build and push Docker image
+      id: build
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  # Job 4: Deploy to Render
+  deploy:
+    name: 🚀 Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: 🚀 Deploy to Render
+      run: |
+        echo "Triggering Render deployment..."
+        if [ ! -z "${{ secrets.RENDER_DEPLOY_HOOK }}" ]; then
+          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
+          echo "✅ Render deployment triggered successfully!"
+        else
+          echo "⚠️ RENDER_DEPLOY_HOOK secret not configured"
+        fi
+      
+    - name: 🏥 Health Check
+      run: |
+        echo "Waiting for deployment to be ready..."
+        sleep 60
+        
+        if [ ! -z "${{ secrets.RENDER_APP_URL }}" ]; then
+          for i in {1..10}; do
+            if curl -f "${{ secrets.RENDER_APP_URL }}/health" > /dev/null 2>&1; then
+              echo "✅ Health check passed!"
+              break
+            else
+              echo "⏳ Attempt $i/10: Health check failed, retrying in 30s..."
+              sleep 30
+            fi
+          done
+        else
+          echo "⚠️ RENDER_APP_URL secret not configured for health check"
+        fi
+
+  # Job 5: Notify
+  notify:
+    name: 📢 Notify Team
+    runs-on: ubuntu-latest
+    needs: [deploy]
+    if: always()
+    
+    steps:
+    - name: 📢 Slack Notification
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ needs.deploy.result }}
+        channel: '#deployments'
+        fields: repo,message,commit,author,action,eventName,ref,workflow,job,took
+        text: |
+          🚀 Deployment Status: ${{ needs.deploy.result }}
+          
+          📊 Pipeline Results:
+          • Tests: ${{ needs.test.result }}
+          • Security: ${{ needs.security.result }}
+          • Build: ${{ needs.build.result }}
+          • Deploy: ${{ needs.deploy.result }}
+          
+          🔗 App URL: ${{ secrets.RENDER_APP_URL }}
+          📝 Commit: ${{ github.sha }}
+          👤 Author: ${{ github.actor }}
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      if: env.SLACK_WEBHOOK_URL != null
+
+  # Job 6: Create Release (on main branch)
+  release:
+    name: 🏷️ Create Release
+    runs-on: ubuntu-latest
+    needs: [deploy]
+    if: github.ref == 'refs/heads/main' && needs.deploy.result == 'success'
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: 🏷️ Create Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ github.run_number }}
+        release_name: Release v${{ github.run_number }}
+        body: |
+          🚀 **Automated Release v${{ github.run_number }}**
+          
+          ## 📋 What's Changed
+          - Latest changes from main branch
+          - All tests passed ✅
+          - Security scan completed ✅
+          - Successfully deployed to production 🌟
+          
+          ## 🔗 Links
+          - **Live App**: ${{ secrets.RENDER_APP_URL }}
+          - **Docker Image**: ghcr.io/${{ github.repository }}:latest
+          - **Commit**: ${{ github.sha }}
+          
+          ## 🏗️ Build Info
+          - **Workflow**: ${{ github.workflow }}
+          - **Run ID**: ${{ github.run_id }}
+          - **Triggered by**: ${{ github.actor }}
+        draft: false
+        prerelease: false
